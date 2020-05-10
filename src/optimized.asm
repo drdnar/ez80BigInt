@@ -1,0 +1,843 @@
+
+	.assume adl=1
+
+	.def	_BigIntZero
+	.def	_BigIntOne
+;	.def	_BigIntNegativeOne
+	.def	_BigIntCopyFromTo
+	.def	_BigIntSetToZero
+	.def	_BigIntSetToOne
+	.def	_BigIntSetToNegativeOne
+	.def	_BigIntIncrement
+	.def	_BigIntDecrement
+	.def	_BigIntAdd
+	.def	_BigIntSubtract
+;	.def	_BigIntAddInPlace
+;	.def	_BigIntSubtractInPlace
+	.def	_BigIntNegate
+;	.def	_BigIntNegateInPlace
+	.def	_BigIntIsNonZero
+	.def	_BigIntIsZero
+	.def	_BigIntGetSign
+	.def	_BigIntCompare
+	.def	_BigIntHexify
+	.def	_BigIntShiftLeft
+	.def	_BigIntShiftBitInOnLeft
+;	.def	_BigIntShiftLeftInPlace
+	.def	_BigIntUnsignedShiftRight
+;	.def	_BigIntShiftUnsignedRightInPlace
+	.def	_BigIntShiftRight
+	.def	_BigIntShiftBitInOnRight
+;	.def	_BigIntShiftRightInPlace
+	.def	_BigIntAnd
+	.def	_BigIntOr
+	.def	_BigIntXor
+	.def	_BigIntNot
+	.def	_BigIntNand
+	.def	_BigIntGetBit
+	.def	_BigIntSetBit
+
+.text
+BIG_INT_SIZE = 16
+
+_BigIntOne:
+	.db	1
+_BigIntZero:
+	.db	0, 0, 0, 0, 0, 0, 0, 0
+	.db	0, 0, 0, 0, 0, 0, 0, 0
+;_BigIntNegativeOne:
+;	.db	255, 255, 255, 255, 255, 255, 255, 255
+;	.db	255, 255, 255, 255, 255, 255, 255, 255
+
+;-------------------------------------------------------------------------------
+_BigIntCopyFromTo:
+	pop	bc
+	pop	hl
+	pop	de
+	push	de
+	push	hl
+	push	bc
+BigIntCopyFromTo:
+	ld	bc, BIG_INT_SIZE
+	ldir
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntSetToZero:
+	pop	hl
+	pop	de
+	push	de
+	push	hl
+BigIntSetToZero:
+; Input:
+;  - DE: Target address
+	sbc	hl,hl
+	adc	hl,de
+	ld	(hl),0
+	inc	de
+	ld	bc,BIG_INT_SIZE - 1
+	ldir
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntSetToOne:
+	pop	hl
+	pop	de
+	push	de
+	push	hl
+BigIntSetToOne:
+; Input:
+;  - DE: Target address
+	ld	a,1
+	ld	(de),a
+	inc	de
+	sbc	hl,hl
+	adc	hl,de
+	inc	de
+	ld	bc,BIG_INT_SIZE - 1
+	ldir
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntSetToNegativeOne:
+	pop	hl
+	pop	de
+	push	de
+	push	hl
+BigIntSetToNegativeOne:
+; Input:
+;  - DE: Target address
+	sbc	hl,hl
+	adc	hl,de
+	ld	(hl),255
+	inc	de
+	ld	bc,BIG_INT_SIZE - 1
+	ldir
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntIncrement:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+BigIntIncrement:
+; Input:
+;  - HL: Number
+	ld	bc,BIG_INT_SIZE * 256
+	scf
+biincloop:
+	ld	a,(hl)
+	adc	a,c
+	ld	(hl),a
+	inc	hl
+	djnz	biincloop
+	sbc	a,a
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntDecrement:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+BigIntDecrement:
+; Input:
+;  - HL: Number
+	ld	bc,BIG_INT_SIZE * 256
+	scf
+bidecloop:
+	ld	a,(hl)
+	sbc	a,c
+	ld	(hl),a
+	inc	hl
+	djnz	bidecloop
+	ld	a,0
+	ret	po
+	inc	a
+	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntAdd:
+;	pop	iy
+;	pop	bc
+;	pop	hl
+;	pop	de
+;	push	de
+;	push	hl
+;	push	bc
+;	push	iy
+;BigIntAdd:
+; Inputs:
+;  - BC: n1
+;  - HL: n2
+; Output:
+;  - DE: sum
+; Destroys:
+;  - IYL,A
+;	ld	iyl,BIG_INT_SIZE
+;	or	a
+;bialoop:
+;	ld	a,(bc)
+;	inc	bc
+;	adc	a,(hl)
+;	inc	hl
+;	ld	(de),a
+;	inc	de
+;	dec	iyl
+;	jr	nz,bialoop
+;	sbc	a,a
+;	neg
+;	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntAddInPlace:
+_BigIntAdd:
+	pop	bc
+	pop	de
+	pop	hl
+	push	hl
+	push	de
+	push	bc
+;BigIntAddInPlace:
+BigIntAdd:
+; Inputs:
+;  - DE: n1, also gets sum
+;  - HL: n2
+	ld	b,BIG_INT_SIZE
+	or	a
+biaiploop:
+	ld	a,(de)
+	adc	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	biaiploop
+	sbc	a,a
+	neg
+	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntSubtract:
+;	pop	iy
+;	pop	bc
+;	pop	hl
+;	pop	de
+;	push	de
+;	push	hl
+;	push	bc
+;	push	iy
+;BigIntSubtract:
+; Inputs:
+;  - BC: n1
+;  - HL: n2
+; Output:
+;  - DE: n1 - n2
+; Destroys:
+;  - IYL,A
+;	ld	iyl,BIG_INT_SIZE
+;	or	a
+;bisloop:
+;	ld	a,(bc)
+;	inc	bc
+;	sbc	a,(hl)
+;	inc	hl
+;	ld	(de),a
+;	inc	de
+;	dec	iyl
+;	jr	nz,bisloop
+;	sbc	a,a
+;	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntSubtractInPlace:
+_BigIntSubtract:
+	pop	bc
+	pop	de
+	pop	hl
+	push	hl
+	push	de
+	push	bc
+;BigIntSubtractInPlace:
+BigIntSubtract:
+; Inputs:
+;  - DE: n1, also gets difference
+;  - HL: n2
+	ld	b,BIG_INT_SIZE
+	or	a
+bisiploop:
+	ld	a,(de)
+	sbc	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	bisiploop
+	sbc	a,a
+	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntNegate:
+;	pop	bc
+;	pop	hl
+;	pop	de
+;	push	de
+;	push	hl
+;	push	bc
+;BigIntNegate:
+; Inputs:
+;  - DE: n
+;  - HL: target
+;	ld	bc,BIG_INT_SIZE * 256
+;	scf
+;binegloop:
+;	ld	a,(hl)
+;	inc	hl
+;	cpl
+;	adc	a,c
+;	ld	(de),a
+;	inc	de
+;	djnz	binegloop
+;	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntNegateInPlace:
+_BigIntNegate:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+;BigIntNegateInPlace:
+BigIntNegate:
+; Input:
+;  - HL
+;	ld	bc,BIG_INT_SIZE * 256
+;	scf
+biniploop:
+	ld	a,(hl)
+	cpl
+	adc	a,c
+	ld	(hl),a
+	inc	hl
+	djnz	biniploop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntIsNonZero:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+BigIntIsNonZero:
+; Input:
+;  - HL
+	ld	b,BIG_INT_SIZE
+	xor	a
+biinzloop:
+	sub	a,(hl)
+	ret	nz
+	inc	hl
+	djnz	biinzloop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntIsZero:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+BigIntIsZero:
+; Input:
+;  - HL
+	ld	b,BIG_INT_SIZE
+	xor	a
+biizloop:
+	cp	a,(hl)
+	ret	nz
+	inc	hl
+	djnz	biizloop
+	inc	a
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntGetSign:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+BigIntGetSign:
+; Input:
+;  - HL
+	ld	b,BIG_INT_SIZE
+	xor	a
+bigsloop:
+	cp	a,(hl)
+	jr	nz,bigsnz
+	inc	hl
+	djnz	bigsloop
+	ret
+bigsnz:
+	; Copy B to C and zero BCU and B
+	ld	c,1
+	mlt	bc
+	add	hl,bc
+	dec	hl
+	ld	a,(hl)
+	add	a,a
+	sbc	a,a
+	or	1
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntCompare:
+	pop	bc
+	pop	hl
+	pop	de
+	push	de
+	push	hl
+	push	bc
+BigIntCompare:
+; Input:
+;  - DE: n1
+;  - HL: n2
+	ld	bc,BIG_INT_SIZE
+	add	hl,bc
+	ex	de,hl
+	add	hl,bc
+	ld	b,c
+bicloop:
+	dec	de
+	ld	a,(de)
+	dec	hl
+	sub	a,(hl)
+	jr	nz,bicne
+	djnz	bicloop
+	ret
+bicne:
+	sbc	a,a
+	or	a,1
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntHexify:
+	pop	bc
+	pop	de
+	pop	hl
+	push	hl
+	push	de
+	push	bc
+	ld	a,e
+	rra
+	rra
+	rra
+	rra
+	call	bihnib
+	ld	a,e
+bihnib:	or	0F0h
+	daa
+	add	a,0A0h
+	adc	a,40h
+	ld	(hl),a
+	inc	hl
+	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntShiftLeft:
+;	pop	bc
+;	pop	hl
+;	pop	de
+;	push	de
+;	push	hl
+;	push	bc
+;BigIntShiftLeft:
+; Input:
+;  - HL
+; Output:
+;  - DE
+;	ld	b,BIG_INT_SIZE
+;	or	a
+;bislloop:
+;	ld	a,(hl)
+;	inc	hl
+;	rla
+;	ld	(de), a
+;	inc	de
+;	djnz	bislloop
+;	ld	a,0
+;	adc	a,a
+;	ret
+
+
+;-------------------------------------------------------------------------------
+;_BigIntShiftLeftInPlace:
+_BigIntShiftLeft:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+;BigIntShiftLeftInPlace:
+BigIntShiftLeft:
+; Input:
+;  - HL
+	xor	a
+bislentry:
+	ld	b,BIG_INT_SIZE
+bisliploop:
+	rl	(hl)
+	inc	hl
+	djnz	bisliploop
+	adc	a,a
+	ret
+;-------------------------------------------------------------------------------
+_BigIntShiftBitInOnLeft:
+	pop	bc
+	pop	hl
+	pop	de
+	push	de
+	push	hl
+	push	bc
+BigIntShiftBitInOnLeft:
+; Input:
+;  - HL: n
+;  - E: zero or one
+	xor	a
+	rr	e
+	jr	bislentry
+
+
+;-------------------------------------------------------------------------------
+;_BigIntUnsignedShiftRight:
+;	pop	bc
+;	pop	de
+;	pop	hl
+;	push	hl
+;	push	de
+;	push	bc
+;BigIntUnsignedShiftRight:
+; Input:
+;  - DE
+; Output:
+;  - HL
+;	ld	bc,BIG_INT_SIZE
+;	add	hl,bc
+;	ex	de,hl
+;	add	hl,bc
+;	ld	b,c
+;	or	a
+;bisruloop:
+;	dec	hl
+;bisrentry:
+;	ld	a,(hl)
+;	rra
+;	dec	de
+;	ld	(de), a
+;	djnz	bisruloop
+;	ld	a,0
+;	adc	a,a
+;	ret
+;-------------------------------------------------------------------------------
+;_BigIntShiftRight:
+;	pop	bc
+;	pop	de
+;	pop	hl
+;	push	hl
+;	push	de
+;	push	bc
+;BigIntShiftRight:
+; Input:
+;  - DE
+; Output:
+;  - HL
+;	ld	bc,BIG_INT_SIZE
+;	add	hl,bc
+;	ex	de,hl
+;	add	hl,bc
+;	ld	b,c
+;	dec	hl
+;	ld	a,(hl)
+;	add	a,a
+;	jr	bisrentry
+
+
+;-------------------------------------------------------------------------------
+;_BigIntUnsignedShiftRightInPlace:
+_BigIntUnsignedShiftRight:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+;BigIntUnsignedShiftRightInPlace:
+BigIntUnsignedShiftRight:
+; Input:
+;  - HL
+	ld	bc,BIG_INT_SIZE
+	add	hl,bc
+	ld	b,c
+	xor	a
+bisruiploop:
+	dec	hl
+bisripentry:
+	rr	(hl)
+	djnz	bisruiploop
+	adc	a,a
+	ret
+;-------------------------------------------------------------------------------
+;_BigIntShiftRightInPlace:
+_BigIntShiftRight:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+;BigIntShiftRightInPlace:
+BigIntShiftRight:
+; Input:
+;  - HL
+	ld	bc,BIG_INT_SIZE
+	add	hl,bc
+	ld	b,c
+	dec	hl
+	ld	a,(hl)
+	add	a,a
+	ld	a,0
+	jr	bisripentry
+;-------------------------------------------------------------------------------
+_BigIntShiftBitInOnRight:
+	pop	bc
+	pop	hl
+	pop	de
+	push	de
+	push	hl
+	push	bc
+BigIntShiftBitInOnRight:
+; Input:
+;  - HL: n
+;  - E: zero or one
+	ld	bc,BIG_INT_SIZE
+	add	hl,bc
+	ld	b,c
+	xor	a
+	rr	e
+	jr	bisruiploop
+
+
+;-------------------------------------------------------------------------------
+_BigIntAnd:
+	pop	bc
+	pop	de
+	pop	hl
+	push	hl
+	push	de
+	push	bc
+BigIntAnd:
+; Inputs:
+;  - DE: n1, destination
+;  - HL: n2
+	ld	b,BIG_INT_SIZE
+biandloop:
+	ld	a,(de)
+	and	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	biandloop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntOr:
+	pop	bc
+	pop	de
+	pop	hl
+	push	hl
+	push	de
+	push	bc
+BigIntOr:
+; Inputs:
+;  - DE: n1, destination
+;  - HL: n2
+	ld	b,BIG_INT_SIZE
+biorloop:
+	ld	a,(de)
+	or	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	biorloop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntXor:
+	pop	bc
+	pop	de
+	pop	hl
+	push	hl
+	push	de
+	push	bc
+BigIntXor:
+; Inputs:
+;  - DE: n1, destination
+;  - HL: n2
+	ld	b,BIG_INT_SIZE
+bixorloop:
+	ld	a,(de)
+	xor	a,(hl)
+	inc	hl
+	ld	(de),a
+	inc	de
+	djnz	bixorloop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntNot:
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+BigIntNot:
+; Inputs:
+;  - HL
+	ld	b,BIG_INT_SIZE
+binotloop:
+	ld	a,(hl)
+	cpl
+	ld	(hl),a
+	inc	hl
+	djnz	binotloop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntNand:
+	pop	bc
+	pop	de
+	pop	hl
+	push	hl
+	push	de
+	push	bc
+BigIntNand:
+; Inputs:
+;  - DE: n1, destination
+;  - HL: n2
+	ld	b,BIG_INT_SIZE
+binandloop:
+	ld	a,(de)
+	and	a,(hl)
+	inc	hl
+	cpl
+	ld	(de),a
+	inc	de
+	djnz	binandloop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntGetBit:
+	pop	de
+	pop	hl
+	pop	bc
+	push	bc
+	push	hl
+	push	de
+BigIntGetBit:
+; Inputs:
+;  - HL: n
+;  - BC: bit number
+	xor	a
+; In case you want XL Ints
+;	srl	b
+;	rr	c
+;	rra
+;	srl	b
+;	rr	c
+;	rra
+;	srl	b
+;	rr	c
+	srl	c
+	rra
+	srl	c
+	rra
+	srl	c
+	rla
+	rla
+	rla
+	add	hl,bc
+	ld	b,a
+	inc	b
+	ld	a,(hl)
+bigbloop:
+	rra
+	djnz	bigbloop
+	sbc	a,a
+	and	1
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntSetBit:
+	pop	iy
+	pop	hl
+	pop	bc
+	pop	de
+	push	de
+	push	bc
+	push	hl
+	push	iy
+BigIntSetBit:
+; Inputs:
+;  - HL: n
+;  - BC: bit number
+;  - E: zero or one
+	xor	a
+; In case you want XL Ints
+;	srl	b
+;	rr	c
+;	rra
+;	srl	b
+;	rr	c
+;	rra
+;	srl	b
+;	rr	c
+	srl	c
+	rra
+	srl	c
+	rra
+	srl	c
+	rla
+	rla
+	rla
+	add	hl,bc
+	ld	b,a
+	inc	b
+	xor	a
+	scf
+bisbloop:
+	rla
+	djnz	bisbloop
+	bit	0,e
+	jr	nz,bisb
+	cpl
+	and	a,(hl)
+	ld	(hl),a
+	ret
+bisb:
+	or	a,(hl)
+	ld	(hl),a
+	ret
