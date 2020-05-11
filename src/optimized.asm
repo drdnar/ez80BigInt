@@ -38,6 +38,7 @@
 	.def	_BigIntSetBit
 	.def	_BigIntMultiply
 	.def	_BigIntDivide
+	.def	_BigIntToStringHex
 
 .text
 BIG_INT_SIZE = 16
@@ -443,6 +444,10 @@ _BigIntHexify:
 	push	hl
 	push	de
 	push	bc
+BigIntHexify:
+; Inputs:
+;  - E: byte
+;  - HL: target
 	ld	a,e
 	rra
 	rra
@@ -1026,4 +1031,27 @@ bid.skip:
 	add	hl,sp
 	ld	sp,hl
 	pop	ix
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntToStringHex:
+	pop	bc
+	pop	iy
+	pop	hl
+	push	hl
+	push	hl
+	push	bc
+BigIntToStringHex:
+; Inputs:
+;  - IY: number
+;  - HL: ASCII target
+	lea	iy,iy + BIG_INT_SIZE - 1
+	ld	b,BIG_INT_SIZE
+.loop:
+	ld	e,(iy)
+	dec	iy
+	call	BigIntHexify
+	djnz	.loop
+	ld	(hl),0
 	ret

@@ -24,7 +24,7 @@ extern const BigInt_t BigIntOne;
  * @param destination Pointer to BigInt to overwrite
  */
 /*void BigIntCopyFromTo(const BigInt_t* source, BigInt_t* destination);*/
-#define BigIntCopyFromTo(src, dst) memcpy(dst, src, BIG_INT_SIZE)
+#define BigIntCopyFromTo(src, dst) memcpy(dst, src, sizeof(BigInt_T))
 
 /**
  * Zeros-out a BigInt.
