@@ -185,6 +185,11 @@ void main(void) {
     fontlib_DrawString(buffer);
     fontlib_Newline();
     
+    fontlib_DrawString("n6dec = ");
+    BigIntToString(&n6, buffer);
+    fontlib_DrawString(buffer);
+    fontlib_Newline();
+    
     
     /* Pause */
     while (!os_GetCSC());

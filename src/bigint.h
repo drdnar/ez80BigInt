@@ -16,7 +16,7 @@ typedef struct
 } BigInt_t;
 
 extern const BigInt_t BigIntZero;
-extern const BigInt_t BigIntOne;
+extern const BigInt_t BigIntTen;
 
 /**
  * Copies a BigInt.
@@ -24,7 +24,7 @@ extern const BigInt_t BigIntOne;
  * @param destination Pointer to BigInt to overwrite
  */
 /*void BigIntCopyFromTo(const BigInt_t* source, BigInt_t* destination);*/
-#define BigIntCopyFromTo(src, dst) memcpy(dst, src, sizeof(BigInt_T))
+#define BigIntCopyFromTo(src, dst) memcpy(dst, src, sizeof(BigInt_t))
 
 /**
  * Zeros-out a BigInt.
@@ -155,6 +155,15 @@ char* BigIntHexify(const uint8_t n, char* buffer);
  * @param buffer 
  */
 char* BigIntToStringHex(const BigInt_t* n, char* buffer);
+
+/**
+ * Converts an unsigned BigInt into a decimal string.
+ * This routine is slow and uses a fair bit of stack space.
+ * @param n Pointer to BigInt
+ * @param buffer Pointer to buffer to write string
+ * @return Pointer to '\0' at end of written string
+ */
+char* BigIntToString(const BigInt_t* n, char* buffer);
 
 /**
  * Shifts a BigInt left one bit.

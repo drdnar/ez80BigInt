@@ -2,7 +2,7 @@
 	.assume adl=1
 
 	.def	_BigIntZero
-	.def	_BigIntOne
+	.def	_BigIntTen
 ;	.def	_BigIntNegativeOne
 	.def	_BigIntCopyFromTo
 	.def	_BigIntSetToZero
@@ -39,12 +39,13 @@
 	.def	_BigIntMultiply
 	.def	_BigIntDivide
 	.def	_BigIntToStringHex
+	.def	_BigIntToString
 
 .text
 BIG_INT_SIZE = 16
 
-_BigIntOne:
-	.db	1
+_BigIntTen:
+	.db	10
 _BigIntZero:
 	.db	0, 0, 0, 0, 0, 0, 0, 0
 	.db	0, 0, 0, 0, 0, 0, 0, 0
@@ -852,10 +853,13 @@ bisb:
 
 ;-------------------------------------------------------------------------------
 _BigIntMultiply:
+; Simple long multiplication routine.
+; This routine does not return a double-precision result; the result is
+; truncated on overflow.
+bim:
 ; .i1 and .i2 count down instead of up for assembly language reasons.
 ; As a result, instead of indexing n1[.i1] and n2[.i2] directly, we cache
 ; separate pointers.
-bim:
 bim.i1 := 0
 bim.i2 := bim.i1 + 1
 bim.of := bim.i2 + 1
@@ -976,6 +980,9 @@ bim.knownOverflow:
 
 ;-------------------------------------------------------------------------------
 _BigIntDivide:
+; Dumb restoring division routine.
+; Algorithm probably sucks but it works and that's all I'm looking for right
+; now.
 bid:
 bid.i := 0
 bid.localsSize := bid.i + 1
@@ -1054,4 +1061,59 @@ BigIntToStringHex:
 	call	BigIntHexify
 	djnz	.loop
 	ld	(hl),0
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntToString:
+bits:
+bits.digits := 0
+bits.n := bits.digits + 1
+bits.q := bits.n + BIG_INT_SIZE
+bits.r := bits.q + BIG_INT_SIZE
+bits.localsSize := bits.r + BIG_INT_SIZE
+bits.arg0 = bits.localsSize + 6
+bits.buffer = bits.arg0 + 3
+	push	ix
+	ld	ix,-bits.localsSize
+	add	ix,sp
+	ld	sp,ix
+	ld	(ix + bits.digits),0
+	ld	hl,(ix + bits.arg0)
+bits.divLoop:
+	inc	(ix + bits.digits)
+	lea	de,ix + bits.n
+	call	BigIntCopyFromTo
+	pea	ix + bits.r
+	pea	ix + bits.q
+	ld	hl,_BigIntTen
+	push	hl
+	pea	ix + bits.n
+	call	_BigIntDivide
+	pop	hl
+	pop	hl
+	pop	hl
+	pop	hl
+	ld	a,(ix + bits.r)
+	add	a,'0'
+	push	af
+	lea	hl,ix + bits.q
+	push	hl
+	call	BigIntIsNonZero
+	pop	hl
+	jr	nz,bits.divLoop
+	ld	hl,(ix + bits.buffer)
+	ld	b,(ix + bits.digits)
+bits.strLoop:
+	pop	af
+	ld	(hl),a
+	inc	hl
+	djnz	bits.strLoop
+	ld	(hl),0
+	ex	de,hl
+	ld	hl,bits.localsSize
+	add	hl,sp
+	ld	sp,hl
+	ex	de,hl
+	pop	ix
 	ret
