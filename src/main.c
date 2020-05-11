@@ -29,8 +29,8 @@ BigInt_t n6[] = { { 0xEE, 0xFF, 0xC0, 0x41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
 
 BigInt_t neg1[] = { { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, } };
 
-BigInt_t out[BIG_INT_SIZE];
-BigInt_t out2[BIG_INT_SIZE];
+BigInt_t out;
+BigInt_t out2;
 
 char buffer[100];
 
@@ -100,7 +100,9 @@ void main(void) {
     BigIntToStringHex(&out, buffer);
     fontlib_DrawString(buffer);
     fontlib_Newline();
-    
+/*    fontlib_DrawString("expect:00000000000000003931FE67F8F79332");
+    fontlib_Newline();*/
+
     fontlib_DrawString("-n3 = ");
     BigIntCopyFromTo(&n3, &out);
     BigIntNegate(&out);
@@ -138,7 +140,7 @@ void main(void) {
     
     fontlib_DrawString("n1>>1 = ");
     BigIntCopyFromTo(&n1, &out);
-    BigIntUnsignedShiftRight(&out);
+    BigIntShiftRight(&out);
     BigIntToStringHex(&out, buffer);
     fontlib_DrawString(buffer);
     fontlib_Newline();
@@ -170,13 +172,14 @@ void main(void) {
     fontlib_DrawString(buffer);
     fontlib_Newline();
     
-    
+    /* Expect 0x9BC5FD16010E833C */
     fontlib_DrawString("n3/n4 = ");
     BigIntDivide(&n3, &n4, &out, &out2);
     BigIntToStringHex(&out, buffer);
     fontlib_DrawString(buffer);
     fontlib_Newline();
     
+    /* Expect 0x18ED2B368D861928 */
     fontlib_DrawString("n3%n4 = ");
     BigIntToStringHex(&out2, buffer);
     fontlib_DrawString(buffer);

@@ -24,9 +24,9 @@
 	.def	_BigIntShiftLeft
 	.def	_BigIntShiftBitInOnLeft
 ;	.def	_BigIntShiftLeftInPlace
-	.def	_BigIntUnsignedShiftRight
-;	.def	_BigIntShiftUnsignedRightInPlace
 	.def	_BigIntShiftRight
+;	.def	_BigIntShiftUnsignedRightInPlace
+	.def	_BigIntSignedShiftRight
 	.def	_BigIntShiftBitInOnRight
 ;	.def	_BigIntShiftRightInPlace
 	.def	_BigIntAnd
@@ -37,6 +37,7 @@
 	.def	_BigIntGetBit
 	.def	_BigIntSetBit
 	.def	_BigIntMultiply
+	.def	_BigIntDivide
 
 .text
 BIG_INT_SIZE = 16
@@ -413,8 +414,8 @@ _BigIntCompare:
 	push	bc
 BigIntCompare:
 ; Input:
-;  - DE: n1
-;  - HL: n2
+;  - HL: n1
+;  - DE: n2
 	ld	bc,BIG_INT_SIZE
 	add	hl,bc
 	ex	de,hl
@@ -578,13 +579,13 @@ BigIntShiftBitInOnLeft:
 
 ;-------------------------------------------------------------------------------
 ;_BigIntUnsignedShiftRightInPlace:
-_BigIntUnsignedShiftRight:
+_BigIntShiftRight:
 	pop	bc
 	pop	hl
 	push	hl
 	push	bc
 ;BigIntUnsignedShiftRightInPlace:
-BigIntUnsignedShiftRight:
+BigIntShiftRight:
 ; Input:
 ;  - HL
 	ld	bc,BIG_INT_SIZE
@@ -600,13 +601,13 @@ bisripentry:
 	ret
 ;-------------------------------------------------------------------------------
 ;_BigIntShiftRightInPlace:
-_BigIntShiftRight:
+_BigIntSignedShiftRight:
 	pop	bc
 	pop	hl
 	push	hl
 	push	bc
 ;BigIntShiftRightInPlace:
-BigIntShiftRight:
+BigIntSignedShiftRight:
 ; Input:
 ;  - HL
 	ld	bc,BIG_INT_SIZE - 1
@@ -774,6 +775,7 @@ BigIntGetBit:
 	srl	c
 	rra
 	srl	c
+	ld.sis	b,0
 	rla
 	rla
 	rla
@@ -819,6 +821,7 @@ BigIntSetBit:
 	srl	c
 	rra
 	srl	c
+	ld.sis	b,0
 	rla
 	rla
 	rla
@@ -960,6 +963,66 @@ bim.knownOverflow:
 	ld	a,(ix + bim.of)
 ; Close stack frame
 	ld	hl,bim.localsSize
+	add	hl,sp
+	ld	sp,hl
+	pop	ix
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntDivide:
+bid:
+bid.i := 0
+bid.localsSize := bid.i + 1
+bid.oldStackFrame := bid.localsSize
+bid.retAddr := bid.oldStackFrame + 3
+bid.n := bid.retAddr + 3
+bid.d := bid.n + 3
+bid.q := bid.d + 3
+bid.r := bid.q + 3
+; Open stack frame
+	push	ix
+	ld	ix,-bid.localsSize
+	add	ix,sp
+	ld	sp,ix
+; Function body
+	ld	de,(ix + bid.q)
+	call	BigIntSetToZero
+	ld	de,(ix + bid.r)
+	call	BigIntSetToZero
+	ld	(ix + bid.i),BIG_INT_SIZE * 8
+bid.loop:
+	ld	hl,(ix + bid.r)
+	call	BigIntShiftLeft
+	ld	hl,(ix + bid.n)
+	ld	c,(ix + bid.i)
+	dec	c
+	call	BigIntGetBit
+	ld	e,a
+	ld	hl,(ix + bid.r)
+	ld	c,0
+	push	hl
+	call	BigIntSetBit
+	pop	hl
+	ld	de,(ix + bid.d)
+	push	hl
+	push	de
+	call	BigIntCompare
+	pop	hl
+	pop	de
+	bit	7,a	; could also do jp,m which is same size
+	jr	nz,bid.skip
+	call	BigIntSubtract
+	ld	hl,(ix + bid.q)
+	ld	c,(ix + bid.i)
+	dec	c
+	ld	e,1
+	call	BigIntSetBit
+bid.skip:	
+	dec	(ix + bid.i)
+	jr	nz,bid.loop
+; Close stack frame
+	ld	hl,bid.localsSize
 	add	hl,sp
 	ld	sp,hl
 	pop	ix

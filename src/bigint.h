@@ -111,7 +111,7 @@ uint8_t BigIntIsZero(const BigInt_t* n);
 int8_t BigIntGetSign(const BigInt_t* n);
 
 /**
- * Compares n1 to n2.
+ * Compares n1 to n2, UNSIGNED.
  * @param n1 Pointer to a number
  * @param n2 Pointer to number to compare n1 with
  * @return Returns a positive number if n1 > n2, 0 if n1 == n2, and a negative number if n1 < n2.
@@ -179,7 +179,7 @@ uint8_t BigIntShiftBitInOnLeft(BigInt_t* n, uint8_t v);
  * @param n Pointer to number
  * @return Returns right-most bit (0 or 1)
  */
-uint8_t BigIntUnsignedShiftRight(BigInt_t* n);
+uint8_t BigIntShiftRight(BigInt_t* n);
 
 /**
  * Shifts a BigInt right one bit.  Sign is preserved.
@@ -187,7 +187,7 @@ uint8_t BigIntUnsignedShiftRight(BigInt_t* n);
  * @param n Pointer to number
  * @return Returns right-most bit (0 or 1)
  */
-uint8_t BigIntShiftRight(BigInt_t* n);
+uint8_t BigIntSignedShiftRight(BigInt_t* n);
 
 /**
  * Shifts a BigInt right one bit and puts another bit into it.
