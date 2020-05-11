@@ -10,12 +10,10 @@
 extern "C" {
 #endif
 
-/*typedef struct
+typedef struct
 {
-	uint8_t[BIG_INT_SIZE] d;
-} BigInt_t;*/
-/*typedef uint8_t[BIG_INT_SIZE] BigInt_t;*/
-typedef uint8_t BigInt_t;
+	uint8_t d[BIG_INT_SIZE];
+} BigInt_t;
 
 extern const BigInt_t BigIntZero;
 extern const BigInt_t BigIntOne;

@@ -36,6 +36,7 @@
 	.def	_BigIntNand
 	.def	_BigIntGetBit
 	.def	_BigIntSetBit
+	.def	_BigIntMultiply
 
 .text
 BIG_INT_SIZE = 16
@@ -321,8 +322,8 @@ _BigIntNegate:
 BigIntNegate:
 ; Input:
 ;  - HL
-;	ld	bc,BIG_INT_SIZE * 256
-;	scf
+	ld	bc,BIG_INT_SIZE * 256
+	scf
 biniploop:
 	ld	a,(hl)
 	cpl
@@ -589,7 +590,7 @@ BigIntUnsignedShiftRight:
 	ld	bc,BIG_INT_SIZE
 	add	hl,bc
 	ld	b,c
-	xor	a
+	xor	a,a
 bisruiploop:
 	dec	hl
 bisripentry:
@@ -608,13 +609,11 @@ _BigIntShiftRight:
 BigIntShiftRight:
 ; Input:
 ;  - HL
-	ld	bc,BIG_INT_SIZE
+	ld	bc,BIG_INT_SIZE - 1
 	add	hl,bc
 	ld	b,c
-	dec	hl
-	ld	a,(hl)
-	add	a,a
-	ld	a,0
+	sra	(hl)
+	xor	a,a
 	jr	bisripentry
 ;-------------------------------------------------------------------------------
 _BigIntShiftBitInOnRight:
@@ -631,7 +630,7 @@ BigIntShiftBitInOnRight:
 	ld	bc,BIG_INT_SIZE
 	add	hl,bc
 	ld	b,c
-	xor	a
+	xor	a,a
 	rr	e
 	jr	bisruiploop
 
@@ -840,4 +839,128 @@ bisbloop:
 bisb:
 	or	a,(hl)
 	ld	(hl),a
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntMultiply:
+; .i1 and .i2 count down instead of up for assembly language reasons.
+; As a result, instead of indexing n1[.i1] and n2[.i2] directly, we cache
+; separate pointers.
+bim.i1 := 0
+bim.i2 := bim.i1 + 1
+bim.of := bim.i2 + 1
+bim.tempptr := bim.of + 1
+bim.temp := bim.tempptr + 3
+bim.localsSize := bim.temp + BIG_INT_SIZE
+bim.oldStackFrame := bim.localsSize
+bim.retAddr := bim.oldStackFrame + 3
+bim.arg1 := bim.retAddr + 3
+bim.n1 := bim.arg1
+bim.arg2 := bim.arg1 + 3
+bim.n2 := bim.arg2
+bim.prod := bim.arg2 + 3
+bim:
+; Open stack frame
+	push	ix
+	ld	ix,-bim.localsSize
+	add	ix,sp
+	ld	sp,ix
+; Function body
+	; of = 0;
+	ld	(ix + bim.of),0
+	; BigIntSetToZero(.prod);
+	ld	de,(ix + bim.prod)
+	call	BigIntSetToZero
+	; for (.i2 = BIG_INT_SIZE, .tempptr = &.temp; . . . )
+	ld	(ix + bim.i2),BIG_INT_SIZE
+	lea	hl,ix + bim.temp - 1
+	ld	(ix + bim.tempptr),hl
+bim.outerLoop:
+; IX: frame pointer
+; IY: .n1 ptr
+; HL: .temp ptr
+; DE: carry
+; A: n2[i2++]
+	; BigIntSetToZero(&.tempptr);
+	lea	de,ix + bim.temp
+	call	BigIntSetToZero
+	; for (.i1 = .i2, carry = 0; . . . )
+	ld	a,(ix + bim.i2)
+	ld	(ix + bim.i1),a
+	; carry = 0
+	ld	de,0
+	; cache .n2[.i2++]
+	ld	hl,(ix + bim.n2)
+	ld	a,(hl)
+	inc	hl
+	ld	(ix + bim.n2),hl
+	ld	hl,(ix + bim.tempptr)
+	inc	hl
+	ld	(ix + bim.tempptr),hl
+	ld	iy,(ix + bim.arg1)
+bim.byteLoop:
+	; p = .n1[.i1++] * .n2[.i2++];
+	ld	c,(iy)
+	inc	iy
+	ld	b,a
+	mlt	bc
+	; p += carry;
+	ex	de,hl
+	add	hl,bc
+	ex	de,hl
+	; .temp[.i1++] = p & 0xFF;
+	ld	(hl),e
+	inc	hl
+	; carry = p >> 8;
+	ld	e,d
+	ld	d,0
+	; for ( . . . ; .i1 > 0; i1--);
+	dec	(ix + bim.i1)
+	jr	nz,bim.byteLoop
+	; .of |= BigIntAdd(.prod, &.temp);
+	ld	de,(ix + bim.prod)
+	push	af
+	lea	hl,ix + bim.temp
+	call	BigIntAdd
+	pop	de
+; Check if continuing the multiply to a full double-precision size would generate an overflow
+; We check this each time for each non-zero byte in n2
+	; if (of) goto .knownOverflow;
+	jr	nz,bim.setOverflow
+	bit	0,(ix + bim.of)
+	jr	nz,bim.knownOverflow
+	; for (b = BIG_INT_SIZE - .i2; b > 0; . . . )
+	ld	a,BIG_INT_SIZE
+	sub	a,(ix + bim.i2)
+	or	a
+	jr	z,bim.knownOverflow
+	ld	b,a
+	; if (.n2[.i2] == 0) goto .knownOverflow;
+	xor	a
+	cp	d
+	jr	z,bim.knownOverflow
+	lea	hl,iy + 0
+bim.ofLoop:
+	; A |= .n2[B];
+	or	a,(hl)
+	inc	hl
+	; for ( . . . ; b > 0; b--)
+	djnz	bim.ofLoop
+	; if (!A) goto .knownOverflow
+	jr	z,bim.knownOverflow
+bim.setOverflow:
+	; .of = 0xFF;
+	ld	(ix + bim.of),255
+bim.knownOverflow:
+	; for ( . . . ; .i2 > 0; .i2--)
+	dec	(ix + bim.i2)
+	jr	nz,bim.outerLoop
+	; return .of;
+	ld	a,(ix + bim.of)
+; Close stack frame
+	ld	hl,bim.localsSize
+	add	hl,sp
+	ld	sp,hl
+	pop	ix
 	ret
