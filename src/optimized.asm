@@ -847,6 +847,7 @@ _BigIntMultiply:
 ; .i1 and .i2 count down instead of up for assembly language reasons.
 ; As a result, instead of indexing n1[.i1] and n2[.i2] directly, we cache
 ; separate pointers.
+bim:
 bim.i1 := 0
 bim.i2 := bim.i1 + 1
 bim.of := bim.i2 + 1
@@ -860,7 +861,6 @@ bim.n1 := bim.arg1
 bim.arg2 := bim.arg1 + 3
 bim.n2 := bim.arg2
 bim.prod := bim.arg2 + 3
-bim:
 ; Open stack frame
 	push	ix
 	ld	ix,-bim.localsSize
@@ -877,53 +877,54 @@ bim:
 	lea	hl,ix + bim.temp - 1
 	ld	(ix + bim.tempptr),hl
 bim.outerLoop:
-; IX: frame pointer
-; IY: .n1 ptr
-; HL: .temp ptr
-; DE: carry
-; A: n2[i2++]
 	; BigIntSetToZero(&.tempptr);
 	lea	de,ix + bim.temp
 	call	BigIntSetToZero
+; IX: frame pointer
+; IYL: n1
+; IYH: n2[i2++]
+; HL: n1 ptr
+; DE: .temp ptr
+; A, carry flag: carry
+	; .i2++;
+	ld	de,(ix + bim.tempptr)
+	inc	de
+	ld	(ix + bim.tempptr),de
 	; for (.i1 = .i2, carry = 0; . . . )
-	ld	a,(ix + bim.i2)
-	ld	(ix + bim.i1),a
-	; carry = 0
-	ld	de,0
+	ld	iy,(ix + bim.i2)
 	; cache .n2[.i2++]
 	ld	hl,(ix + bim.n2)
 	ld	a,(hl)
 	inc	hl
+	ld	iyh,a
 	ld	(ix + bim.n2),hl
-	ld	hl,(ix + bim.tempptr)
-	inc	hl
-	ld	(ix + bim.tempptr),hl
-	ld	iy,(ix + bim.arg1)
+	ld	hl,(ix + bim.arg1)
+	; carry = 0.  Also carry_flag = 0.
+	xor	a,a
 bim.byteLoop:
-	; p = .n1[.i1++] * .n2[.i2++];
-	ld	c,(iy)
-	inc	iy
-	ld	b,a
+	; p = .n1[.i1] * .n2[.i2];
+	ld	c,(hl)
+	inc	hl
+	ld	b,iyh
 	mlt	bc
 	; p += carry;
-	ex	de,hl
-	add	hl,bc
-	ex	de,hl
-	; .temp[.i1++] = p & 0xFF;
-	ld	(hl),e
-	inc	hl
-	; carry = p >> 8;
-	ld	e,d
-	ld	d,0
+	adc	a,c
+	; .temp[.i1 + .i2] = p & 0xFF;
+	ld	(de),a
+	inc	de
+	; carry = p >> 8; (with carry flag)
+	ld	a,b
 	; for ( . . . ; .i1 > 0; i1--);
-	dec	(ix + bim.i1)
+	dec	iyl
 	jr	nz,bim.byteLoop
 	; .of |= BigIntAdd(.prod, &.temp);
 	ld	de,(ix + bim.prod)
+	push	hl
 	push	af
 	lea	hl,ix + bim.temp
 	call	BigIntAdd
 	pop	de
+	pop	hl
 ; Check if continuing the multiply to a full double-precision size would generate an overflow
 ; We check this each time for each non-zero byte in n2
 	; if (of) goto .knownOverflow;
@@ -940,7 +941,6 @@ bim.byteLoop:
 	xor	a
 	cp	d
 	jr	z,bim.knownOverflow
-	lea	hl,iy + 0
 bim.ofLoop:
 	; A |= .n2[B];
 	or	a,(hl)
