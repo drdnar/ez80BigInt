@@ -139,7 +139,7 @@ uint8_t BigIntMultiply(const BigInt_t* n1, const BigInt_t* n2, BigInt_t* out);
  * @param q Pointer to BigInt to write quotient to
  * @param r Pointer to BigInt to write remainder to
  */
-void BigIntDivide(BigInt_t* n, BigInt_t* d, BigInt_t* q, BigInt_t* r);
+void BigIntDivide(const BigInt_t* n, const BigInt_t* d, BigInt_t* q, BigInt_t* r);
 
 /**
  * Classic optimized routine.  No null-terminator is written.
@@ -213,7 +213,7 @@ uint8_t BigIntShiftBitInOnRight(BigInt_t* n, uint8_t v);
  * @param b Bit number to access
  * @return 0 or 1
  */
-uint8_t BigIntGetBit(BigInt_t* n, unsigned int b);
+uint8_t BigIntGetBit(const BigInt_t* n, unsigned int b);
 
 /**
  * Sets bit b in n to v.
