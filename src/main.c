@@ -13,21 +13,21 @@
 
 
 /* 0x12345678901234567890123456789012 */
-BigInt_t n1[] = { { 0x12, 0x90, 0x78, 0x56, 0x34, 0x12, 0x90, 0x78, 0x56, 0x34, 0x12, 0x90, 0x78, 0x56, 0x34, 0x12, } };
+BigInt_t n1 = { 0x12, 0x90, 0x78, 0x56, 0x34, 0x12, 0x90, 0x78, 0x56, 0x34, 0x12, 0x90, 0x78, 0x56, 0x34, 0x12, };
 /* 0x11111111111111111111111111111111 */
-BigInt_t n2[] = { { 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, } };
+BigInt_t n2 = { 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, };
 /* 0x123456789ABCDEF0123456789ABCDEF0 */
-BigInt_t n3[] = { { 0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, 0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, } };
+BigInt_t n3 = { 0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, 0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12, };
 /* 0x1DEADBEEF4C0FFEE */
-BigInt_t n4[] = { { 0xEE, 0xFF, 0xC0, 0xF4, 0xEE, 0xDB, 0xEA, 0x1D, 0, 0, 0, 0, 0, 0, 0, 0, } };
+BigInt_t n4 = { 0xEE, 0xFF, 0xC0, 0xF4, 0xEE, 0xDB, 0xEA, 0x1D, 0, 0, 0, 0, 0, 0, 0, 0, };
 
 /* 0xDEADBEEF */
-BigInt_t n5[] = { { 0xEF, 0xBE, 0xAD, 0xDE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, } };
+BigInt_t n5 = { 0xEF, 0xBE, 0xAD, 0xDE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, };
 
 /* 0x41COFFEE */
-BigInt_t n6[] = { { 0xEE, 0xFF, 0xC0, 0x41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, } };
+BigInt_t n6 = { 0xEE, 0xFF, 0xC0, 0x41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, };
 
-BigInt_t neg1[] = { { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, } };
+BigInt_t neg1 = { 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, };
 
 BigInt_t out;
 BigInt_t out2;
@@ -111,9 +111,9 @@ void main(void) {
     fontlib_Newline();
     
     fontlib_DrawString("IsZero(n4): ");
-    fontlib_DrawInt(BigIntIsZero(n4), 1);
+    fontlib_DrawInt(BigIntIsZero(&n4), 1);
     fontlib_DrawString("  IsNonZero(n4): ");
-    fontlib_DrawInt(BigIntIsNonZero(n4), 1);
+    fontlib_DrawInt(BigIntIsNonZero(&n4), 1);
     fontlib_Newline();
     
     fontlib_DrawString("IsZero(0): ");
@@ -123,7 +123,7 @@ void main(void) {
     fontlib_Newline();
     
     fontlib_DrawString("sign(n1): ");
-    fontlib_DrawInt(BigIntGetSign(n1), 1);
+    fontlib_DrawInt(BigIntGetSign(&n1), 1);
     fontlib_DrawString("  sign(0): ");
     fontlib_DrawInt(BigIntGetSign(&BigIntZero), 1);
     fontlib_DrawString("  sign(-1): ");
@@ -131,11 +131,11 @@ void main(void) {
     fontlib_Newline();
     
     fontlib_DrawString("compare(n1,n2): ");
-    fontlib_DrawInt(BigIntCompare(n1, n2), 1);
+    fontlib_DrawInt(BigIntCompare(&n1, &n2), 1);
     fontlib_DrawString(" (n2,n1): ");
-    fontlib_DrawInt(BigIntCompare(n2, n1), 1);
+    fontlib_DrawInt(BigIntCompare(&n2, &n1), 1);
     fontlib_DrawString(" (n1,n1): ");
-    fontlib_DrawInt(BigIntCompare(n1, n1), 1);
+    fontlib_DrawInt(BigIntCompare(&n1, &n1), 1);
     fontlib_Newline();
     
     fontlib_DrawString("n1>>1 = ");
