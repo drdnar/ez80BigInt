@@ -1,47 +1,47 @@
 	.assume adl=1
 
-	.def	_BigIntZero
-	.def	_BigIntTen
-;	.def	_BigIntNegativeOne
-	.def	_BigIntCopyFromTo
-	.def	_BigIntSetToZero
-	.def	_BigIntSetToOne
-	.def	_BigIntSetToNegativeOne
-	.def	_BigIntIncrement
-	.def	_BigIntDecrement
-	.def	_BigIntAdd
-	.def	_BigIntSubtract
-;	.def	_BigIntAddInPlace
-;	.def	_BigIntSubtractInPlace
-	.def	_BigIntNegate
-;	.def	_BigIntNegateInPlace
-	.def	_BigIntIsNonZero
-	.def	_BigIntIsZero
-	.def	_BigIntGetSign
-	.def	_BigIntCompare
-	.def	_BigIntHexify
-	.def	_BigIntShiftLeft
-	.def	_BigIntShiftBitInOnLeft
-;	.def	_BigIntShiftLeftInPlace
-	.def	_BigIntShiftRight
-;	.def	_BigIntShiftUnsignedRightInPlace
-	.def	_BigIntSignedShiftRight
-	.def	_BigIntShiftBitInOnRight
-;	.def	_BigIntShiftRightInPlace
-	.def	_BigIntAnd
-	.def	_BigIntOr
-	.def	_BigIntXor
-	.def	_BigIntNot
-	.def	_BigIntNand
-	.def	_BigIntGetBit
-	.def	_BigIntSetBit
-	.def	_BigIntMultiply
-	.def	_BigIntDivide
-	.def	_BigIntToStringHex
-	.def	_BigIntToString
+	.public	_BigIntZero
+	.public	_BigIntTen
+;	.public	_BigIntNegativeOne
+	.public	_BigIntCopyFromTo
+	.public	_BigIntSetToZero
+	.public	_BigIntSetToOne
+	.public	_BigIntSetToNegativeOne
+	.public	_BigIntIncrement
+	.public	_BigIntDecrement
+	.public	_BigIntAdd
+	.public	_BigIntSubtract
+;	.public	_BigIntAddInPlace
+;	.public	_BigIntSubtractInPlace
+	.public	_BigIntNegate
+;	.public	_BigIntNegateInPlace
+	.public	_BigIntIsNonZero
+	.public	_BigIntIsZero
+	.public	_BigIntGetSign
+	.public	_BigIntCompare
+	.public	_BigIntHexify
+	.public	_BigIntShiftLeft
+	.public	_BigIntShiftBitInOnLeft
+;	.public	_BigIntShiftLeftInPlace
+	.public	_BigIntShiftRight
+;	.public	_BigIntShiftUnsignedRightInPlace
+	.public	_BigIntSignedShiftRight
+	.public	_BigIntShiftBitInOnRight
+;	.public	_BigIntShiftRightInPlace
+	.public	_BigIntAnd
+	.public	_BigIntOr
+	.public	_BigIntXor
+	.public	_BigIntNot
+	.public	_BigIntNand
+	.public	_BigIntGetBit
+	.public	_BigIntSetBit
+	.public	_BigIntMultiply
+	.public	_BigIntDivide
+	.public	_BigIntToStringHex
+	.public	_BigIntToString
 
 .text
-BIG_INT_SIZE = 16
+BIG_INT_SIZE := 16
 
 _BigIntTen:
 	.db	10
@@ -970,8 +970,7 @@ bim.knownOverflow:
 	; return .of;
 	ld	a,(ix + bim.of)
 ; Close stack frame
-	ld	hl,bim.localsSize
-	add	hl,sp
+	ld	hl,ix + bim.localsSize
 	ld	sp,hl
 	pop	ix
 	ret
@@ -1033,8 +1032,7 @@ bid.skip:
 	dec	(ix + bid.i)
 	jr	nz,bid.loop
 ; Close stack frame
-	ld	hl,bid.localsSize
-	add	hl,sp
+	lea	hl,ix + bid.localsSize
 	ld	sp,hl
 	pop	ix
 	ret
@@ -1066,53 +1064,97 @@ BigIntToStringHex:
 ;-------------------------------------------------------------------------------
 _BigIntToString:
 bits:
-bits.digits := 0
-bits.n := bits.digits + 1
-bits.q := bits.n + BIG_INT_SIZE
-bits.r := bits.q + BIG_INT_SIZE
-bits.localsSize := bits.r + BIG_INT_SIZE
+bits.n := 0
+bits.start := bits.n + BIG_INT_SIZE
+bits.localsSize := bits.start + 3
 bits.arg0 = bits.localsSize + 6
 bits.buffer = bits.arg0 + 3
+; Mateo, I just want you to know that the spaces in here were put there by jacobly.
 	push	ix
-	ld	ix,-bits.localsSize
-	add	ix,sp
-	ld	sp,ix
-	ld	(ix + bits.digits),0
-	ld	hl,(ix + bits.arg0)
-bits.divLoop:
-	inc	(ix + bits.digits)
-	lea	de,ix + bits.n
+	ld	ix, -bits.localsSize
+	add	ix, sp
+	ld	sp, ix
+	ld	hl, (ix + bits.arg0)
+	lea	de, ix + bits.n
 	call	BigIntCopyFromTo
-	pea	ix + bits.r
-	pea	ix + bits.q
-	ld	hl,_BigIntTen
-	push	hl
-	pea	ix + bits.n
-	call	_BigIntDivide
-	pop	hl
-	pop	hl
-	pop	hl
-	pop	hl
-	ld	a,(ix + bits.r)
-	add	a,'0'
-	push	af
-	lea	hl,ix + bits.q
-	push	hl
-	call	BigIntIsNonZero
-	pop	hl
-	jr	nz,bits.divLoop
-	ld	hl,(ix + bits.buffer)
-	ld	b,(ix + bits.digits)
-bits.strLoop:
-	pop	af
-	ld	(hl),a
+	ld	(ix + bits.start), de
+	ld	iyh, 0
+bits.digitsLoop:
+	ld	de, (ix + bits.start)
+	ld	c, 0
+	ld	iyl, c
+bits.divLoop:
+	dec	de
+	ld	a, (de)
+	ld	l, a
+	ld	b, ((1 shl 14) + 99) / 100
+	ld	h, b
+	mlt	bc
+	mlt	hl
+	ld	l, h
+	ld	h, 0
+	add	hl, bc
+	add	hl, hl
+	add	hl, hl
+	ld	c, 100
+	ld	b, h
+	ld	l, c
+	mlt	hl
+	sub	a, l
+	add	a, c
+	jr	c, bits.fixed
+	sub	a, c
+	inc	b
+bits.fixed:
+	dec	b
+	ld	c, a
+	ld	a, b
+	ld	(de), a
+	or	a, iyl
+	ld	iyl, a
+	jr	nz, bits.notZero
+	ld	(ix + bits.start), de
+bits.notZero:
+	ld	a, e
+	cp	a, ixl
+	jr	nz, bits.divLoop
+	ld	a, c
+	ld	b, ((1 shl 10) + 9) / 10
+	mlt	bc
+	srl	b
+	srl	b
+	ld	e, b
+	ld	c, 10
+	mlt	bc
+	sub	a, c
+	ld	d, a
+	push	de
+	inc	iyh
+	ld	a, iyl
+	or	a, a
+	jr	nz, bits.digitsLoop
+	ld	c, '0'
+	ld	b, iyh
+	ld	hl, (ix + bits.buffer)
+	pop	de
+	ld	a, e
+	or	a, a
+	jr	z, bits.asciiEnter
+	db	$3E
+bits.asciiLoop:
+	pop	de
+	ld	a, e
+	add	a, c
+	ld	(hl), a
 	inc	hl
-	djnz	bits.strLoop
-	ld	(hl),0
-	ex	de,hl
-	ld	hl,bits.localsSize
-	add	hl,sp
-	ld	sp,hl
-	ex	de,hl
+bits.asciiEnter:
+	ld	a, d
+	add	a, c
+	ld	(hl), a
+	inc	hl
+	djnz	bits.asciiLoop
+	ld	(hl), 0
+	lea	ix, ix + bits.localsSize
+	ld	sp, ix
 	pop	ix
 	ret
