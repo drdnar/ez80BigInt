@@ -14,7 +14,13 @@ Routines currently provided:
 * `ShiftLeft`, `ShiftBitInOnLeft`
 * `ShiftRight`, `ShiftBitInOnRight`, `SignedShiftRight`
 * `GetBit`, `SetBit`
+* `ToStringHex`, `ToString` (decimal)
 
 See `src/bigint.h` for full API documentation.
 
 `src/main.c` contains a simple demo program.
+
+### Credits
+
+Optimized `ToString` provided by @jacobly0, who is much better at optimization than I am.
+He also provided some optimizations for the multiply routine, though it's still O(n<sup>2</sup>)

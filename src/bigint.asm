@@ -1063,7 +1063,14 @@ BigIntToStringHex:
 
 ;-------------------------------------------------------------------------------
 _BigIntToString:
+; This optimized routine is courtesy of @jacobly0 .
 bits:
+; <jacobly> and if you want hints, iyh is digit pair count, iyl is a zero indicator, and c is carry (well remainder I guess)
+; <jacobly> it could be slightly faster with a dedicated skip leading zeros loop at the beginning, but it doesn't affect the input I'm testing so whatever >.>
+; <jacobly> also might be smaller with double pushes and a sla b for the last loop
+; <jacobly> also it occurs to me that my slow division routines might actually be really fast for arbitrary division...
+; <jacobly> since I can amortize the overhead outside the inner loop
+; <jacobly> but then again maybe fast long division would still win at these sizes...
 bits.n := 0
 bits.start := bits.n + BIG_INT_SIZE
 bits.localsSize := bits.start + 3
