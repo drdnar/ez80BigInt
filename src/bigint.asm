@@ -19,6 +19,8 @@
 	.public	_BigIntIsZero
 	.public	_BigIntGetSign
 	.public	_BigIntCompare
+	.public	_BigIntBinify
+	.public	_BigIntOctify
 	.public	_BigIntHexify
 	.public	_BigIntShiftLeft
 	.public	_BigIntShiftBitInOnLeft
@@ -37,10 +39,24 @@
 	.public	_BigIntSetBit
 	.public	_BigIntMultiply
 	.public	_BigIntDivide
+	.public	_BigIntToStringBin
+	.public	_BigIntToStringOct
 	.public	_BigIntToStringHex
 	.public	_BigIntToString
 
 .text
+; Some routines jump to the end of a BigInt using LEA, and some routines make a
+; stack local BigInt, so this should be less than 120.
+;
+; GetBit and SetBit assume 8-bit bit index numbers.  If you make this bigger
+; than 32, you'll need to switch to the currently-commented-out code that
+; enables 16-bit indexes.
+;
+; The divide routine assumes 8-bit indexes as well, so it'll need to be
+; reworked.  Maybe make it suck less while you're at it.
+;
+; ToStringOctal's initial digits routine needs to be changed depending on
+; whether the remainder of BIG_INT_SIZE / 3 is zero, one, or two.
 BIG_INT_SIZE := 16
 
 _BigIntTen:
@@ -437,6 +453,59 @@ bicne:
 
 
 ;-------------------------------------------------------------------------------
+_BigIntBinify:
+	pop	de
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+	push	de
+BigIntBinify:
+; Inputs:
+;  - C: byte
+;  - HL: target
+	ld	b,8
+bibloop:
+	ld	a,'0' / 2
+	rl	c
+	rla
+	ld	(hl),a
+	inc	hl
+	djnz	bibloop
+	ld	(hl),0
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntOctify:
+	pop	de
+	pop	bc
+	pop	hl
+	push	hl
+	push	bc
+	push	de
+BigIntOctify:
+; Inputs:
+;  - C: byte
+;  - HL: target
+	ld	b,3
+	or	a,a
+bioloop:
+	ld	a,'0' / 8
+	rla
+	rl	c
+	rla
+	rl	c
+	rla
+	rl	c
+	ld	(hl),a
+	inc	hl
+	djnz	bioloop
+	ld	(hl),0
+	ret
+
+
+;-------------------------------------------------------------------------------
 _BigIntHexify:
 	pop	bc
 	pop	de
@@ -461,6 +530,7 @@ bihnib:	or	0F0h
 	adc	a,40h
 	ld	(hl),a
 	inc	hl
+	ld	(hl),0
 	ret
 
 
@@ -1039,6 +1109,83 @@ bid.skip:
 
 
 ;-------------------------------------------------------------------------------
+_BigIntToStringBin:
+	pop	bc
+	pop	iy
+	pop	hl
+	push	hl
+	push	hl
+	push	bc
+BigIntToStringBin:
+; Inputs:
+;  - IY: number
+;  - HL: ASCII target
+	lea	iy,iy + BIG_INT_SIZE - 1
+	ld	e,BIG_INT_SIZE
+.loop:
+	ld	c,(iy)
+	dec	iy
+	call	BigIntBinify
+	dec	e
+	jr	nz,.loop
+	ret
+
+
+;-------------------------------------------------------------------------------
+_BigIntToStringOct:
+	pop	bc
+	pop	iy
+; If residual octal digits is 1
+	pop	hl
+	push	hl
+; Else
+;	pop	de
+;	push	de
+; End if
+	push	hl
+	push	bc
+BigIntToStringOct:
+; Inputs:
+;  - IY: number
+;  - DE or HL: ASCII target
+; If residual octal digits is 1
+	lea	iy,iy + BIG_INT_SIZE - 4
+	ld	c,(iy + 3)
+	call	BigIntOctify
+	ex	de,hl
+	ld	c,BIG_INT_SIZE / 3
+; If residual octal digits is 2
+;	lea	iy,iy + BIG_INT_SIZE - 2
+;	ld	hl,(iy)
+;	inc	hl
+;	dec.sis	hl
+;	ld	bc,(6 * 256) + (BIG_INT_SIZE / 3)
+;	jr	bitsoinnerloop
+; If residual octal digits is 0
+;	lea	iy,iy + BIG_INT_SIZE - 3
+;	ld	c,BIG_INT_SIZE / 3
+bitsoouterloop:
+	ld	hl,(iy)
+bitsoinnerloop:
+	ld	a,'0' / 8
+	add	hl,hl
+	adc	a,a
+	add	hl,hl
+	adc	a,a
+	add	hl,hl
+	adc	a,a
+	ld	(de),a
+	inc	de
+	djnz	bitsoinnerloop
+	lea	iy,iy - 3
+	dec	c
+	jr	nz,bitsoouterloop
+	ex	de,hl
+	ld	(hl),0
+	ret
+
+
+;-------------------------------------------------------------------------------
 _BigIntToStringHex:
 	pop	bc
 	pop	iy
@@ -1057,7 +1204,6 @@ BigIntToStringHex:
 	dec	iy
 	call	BigIntHexify
 	djnz	.loop
-	ld	(hl),0
 	ret
 
 
